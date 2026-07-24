@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Screen, Regimen, ActiveWorkout, CompletedWorkout, WorkoutSet } from './types';
-import { SK, DEFAULT_REGIMENS } from './constants';
+import { SK, DEFAULT_REGIMENS, DEFAULT_APPS_SCRIPT_URL, DEFAULT_GOOGLE_DOC_URL } from './constants';
 import { fmtDate, genId } from './utils/formatters';
 import { HomeScreen } from './components/HomeScreen';
 import { RegimenSelect } from './components/RegimenSelect';
@@ -17,8 +17,8 @@ export function App() {
   const [regimens, setRegimens] = useState<Regimen[]>(DEFAULT_REGIMENS);
   const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(null);
   const [completedWorkout, setCompletedWorkout] = useState<CompletedWorkout | null>(null);
-  const [appsScriptUrl, setAppsScriptUrl] = useState('');
-  const [docUrl, setDocUrl] = useState('');
+  const [appsScriptUrl, setAppsScriptUrl] = useState(DEFAULT_APPS_SCRIPT_URL);
+  const [docUrl, setDocUrl] = useState(DEFAULT_GOOGLE_DOC_URL);
   const [unit, setUnit] = useState('kg');
   const [history, setHistory] = useState<CompletedWorkout[]>([]);
   const [editingRegimenId, setEditingRegimenId] = useState<string | null>(null);
@@ -33,10 +33,10 @@ export function App() {
       if (sr) setRegimens(JSON.parse(sr));
 
       const su = localStorage.getItem(SK.url);
-      if (su) setAppsScriptUrl(su);
+      setAppsScriptUrl(su || DEFAULT_APPS_SCRIPT_URL);
 
       const sdoc = localStorage.getItem(SK.docUrl);
-      if (sdoc) setDocUrl(sdoc);
+      setDocUrl(sdoc || DEFAULT_GOOGLE_DOC_URL);
 
       const sunit = localStorage.getItem(SK.unit);
       if (sunit) setUnit(sunit);

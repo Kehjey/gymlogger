@@ -9,6 +9,10 @@ export const SK = {
   unit: 'gymlogger_unit',
 };
 
+// Hardcoded Default URLs
+export const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRRmkanihB7aeLxLmKX4OShMFcv9k6hwmF_qnIjfmFllzOMizZEg8Y9WYN5WDI4P09/exec';
+export const DEFAULT_GOOGLE_DOC_URL = 'https://docs.google.com/document/d/15Iv89YLYYgixemu1NDggvtxzvZY4Xrahv6MkYj_nhww/edit?usp=sharing';
+
 export const COMMON_EXERCISES = [
   'Bench Press', 'Incline Dumbbell Press', 'Overhead Press', 'Lateral Raises', 'Tricep Pushdowns',
   'Squat', 'Romanian Deadlift', 'Leg Press', 'Leg Curl', 'Calf Raise',
