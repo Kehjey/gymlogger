@@ -13,10 +13,10 @@ interface CustomWorkoutProps {
   restSeconds: number;
   onCancelRest: () => void;
   onUpdateExerciseName: (name: string) => void;
-  onAddSet: (exerciseIdx: number, set: WorkoutSet) => void;
+  onAddSet: (exerciseIdx: number, set: WorkoutSet, exerciseName?: string) => void;
   onDeleteSet: (exerciseIdx: number, setIdx: number) => void;
-  onAddNewExercise: () => void;
-  onFinish: () => void;
+  onAddNewExercise: (currentName?: string) => void;
+  onFinish: (finalName?: string) => void;
   onCancel: () => void;
 }
 
@@ -42,7 +42,7 @@ export const CustomWorkout: React.FC<CustomWorkoutProps> = ({
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setExerciseName(currentEx.name);
+    setExerciseName(currentEx.name || '');
     if (currentEx.name === '' && nameRef.current) nameRef.current.focus();
   }, [exIdx, currentEx.name]);
 
@@ -55,31 +55,27 @@ export const CustomWorkout: React.FC<CustomWorkoutProps> = ({
     setReps('');
   }, [exIdx, currentEx.sets]);
 
+  function handleNameChange(val: string) {
+    setExerciseName(val);
+    onUpdateExerciseName(val);
+  }
+
   function handleSaveSet() {
     if (!reps.trim()) return;
-    const nameToSave = exerciseName.trim();
-    if (nameToSave && nameToSave !== currentEx.name) {
-      onUpdateExerciseName(nameToSave);
-    }
-    onAddSet(exIdx, { weight: weight.trim(), reps: reps.trim() });
+    const nameToSave = exerciseName.trim() || currentEx.name;
+    onAddSet(exIdx, { weight: weight.trim(), reps: reps.trim() }, nameToSave);
     setReps('');
   }
 
   function handleAddNextExercise() {
     const nameToSave = exerciseName.trim() || currentEx.name;
     if (!nameToSave || currentEx.sets.length === 0) return;
-    if (nameToSave !== currentEx.name) {
-      onUpdateExerciseName(nameToSave);
-    }
-    onAddNewExercise();
+    onAddNewExercise(nameToSave);
   }
 
   function handleFinish() {
     const nameToSave = exerciseName.trim() || currentEx.name;
-    if (nameToSave && nameToSave !== currentEx.name) {
-      onUpdateExerciseName(nameToSave);
-    }
-    onFinish();
+    onFinish(nameToSave);
   }
 
   const canAddNext = (exerciseName.trim() !== '' || currentEx.name !== '') && currentEx.sets.length > 0;
@@ -108,14 +104,14 @@ export const CustomWorkout: React.FC<CustomWorkoutProps> = ({
       <div className="mb-4">
         <label className="text-dimText text-[11px] font-mono uppercase tracking-wider mb-1 block">Exercise Name *</label>
         <input ref={nameRef} value={exerciseName}
-               onChange={e => setExerciseName(e.target.value)}
+               onChange={e => handleNameChange(e.target.value)}
                placeholder="e.g. Squat, Bench Press, Dumbbell Row" />
         
         {/* Suggestions Quick Bar */}
         <div className="flex gap-1.5 overflow-x-auto pt-2 pb-1">
           {COMMON_EXERCISES.slice(0,6).map((item) => (
             <button key={item} className="px-2.5 py-1 rounded bg-surfaceCard border border-dimBorder text-[11px] font-mono text-subText hover:text-white whitespace-nowrap"
-                    onClick={() => { setExerciseName(item); onUpdateExerciseName(item); }}>
+                    onClick={() => handleNameChange(item)}>
               + {item}
             </button>
           ))}

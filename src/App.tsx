@@ -128,102 +128,130 @@ export function App() {
     setScreen('custom-workout');
   }
 
-  function addSet(exerciseIdx: number, set: WorkoutSet) {
-    if (!activeWorkout) return;
-    const updated = { ...activeWorkout };
-    updated.exercises = [...updated.exercises];
-    updated.exercises[exerciseIdx] = { 
-      ...updated.exercises[exerciseIdx], 
-      sets: [...updated.exercises[exerciseIdx].sets, set] 
-    };
-    setActiveWorkout(updated);
+  function addSet(exerciseIdx: number, set: WorkoutSet, exerciseName?: string) {
+    setActiveWorkout(prev => {
+      if (!prev) return null;
+      const updatedExercises = [...prev.exercises];
+      const ex = updatedExercises[exerciseIdx];
+      const exName = (exerciseName !== undefined && exerciseName.trim() !== '') ? exerciseName.trim() : ex.name;
+      updatedExercises[exerciseIdx] = { 
+        ...ex, 
+        name: exName,
+        sets: [...ex.sets, set] 
+      };
+      return { ...prev, exercises: updatedExercises };
+    });
     triggerRestTimer(60);
   }
 
   function deleteSet(exerciseIdx: number, setIdx: number) {
-    if (!activeWorkout) return;
-    const updated = { ...activeWorkout };
-    updated.exercises = [...updated.exercises];
-    updated.exercises[exerciseIdx] = { 
-      ...updated.exercises[exerciseIdx], 
-      sets: updated.exercises[exerciseIdx].sets.filter((_, i) => i !== setIdx) 
-    };
-    setActiveWorkout(updated);
+    setActiveWorkout(prev => {
+      if (!prev) return null;
+      const updatedExercises = [...prev.exercises];
+      const ex = updatedExercises[exerciseIdx];
+      updatedExercises[exerciseIdx] = { 
+        ...ex, 
+        sets: ex.sets.filter((_, i) => i !== setIdx) 
+      };
+      return { ...prev, exercises: updatedExercises };
+    });
   }
 
   function nextExercise() {
-    if (!activeWorkout) return;
-    if (activeWorkout.currentExerciseIndex < activeWorkout.exercises.length - 1) {
-      setActiveWorkout({ ...activeWorkout, currentExerciseIndex: activeWorkout.currentExerciseIndex + 1 });
-    }
+    setActiveWorkout(prev => {
+      if (!prev) return null;
+      if (prev.currentExerciseIndex < prev.exercises.length - 1) {
+        return { ...prev, currentExerciseIndex: prev.currentExerciseIndex + 1 };
+      }
+      return prev;
+    });
   }
 
   function skipExercise() {
     if (!activeWorkout) return;
     if (activeWorkout.currentExerciseIndex < activeWorkout.exercises.length - 1) {
-      setActiveWorkout({ ...activeWorkout, currentExerciseIndex: activeWorkout.currentExerciseIndex + 1 });
+      nextExercise();
     } else {
       finishWorkout();
     }
   }
 
   function updateExerciseName(name: string) {
-    if (!activeWorkout) return;
-    const idx = activeWorkout.currentExerciseIndex;
-    const updated = { ...activeWorkout };
-    updated.exercises = [...updated.exercises];
-    updated.exercises[idx] = { ...updated.exercises[idx], name: name };
-    setActiveWorkout(updated);
-  }
-
-  function addNewExerciseSlot() {
-    if (!activeWorkout) return;
-    const updated = { ...activeWorkout };
-    updated.exercises = [...updated.exercises, { name: '', sets: [] }];
-    updated.currentExerciseIndex = updated.exercises.length - 1;
-    setActiveWorkout(updated);
-  }
-
-  function finishWorkout() {
-    if (!activeWorkout) return;
-    const endTime = new Date().toISOString();
-    const durMs = new Date(endTime).getTime() - new Date(activeWorkout.startTime).getTime();
-    const valid = activeWorkout.exercises.filter(e => e.sets.length > 0 && e.name.trim() !== '');
-    
-    if (valid.length === 0) { 
-      setToast('No sets recorded in this workout session'); 
-      setTimeout(() => setToast(''), 2500);
-      return; 
-    }
-
-    let totalVolume = 0;
-    let totalSets = 0;
-    valid.forEach(ex => {
-      ex.sets.forEach(st => {
-        totalSets++;
-        const wVal = parseFloat(st.weight) || 0;
-        const rVal = parseFloat(st.reps) || 0;
-        totalVolume += wVal * rVal;
-      });
+    setActiveWorkout(prev => {
+      if (!prev) return null;
+      const idx = prev.currentExerciseIndex;
+      const updated = [...prev.exercises];
+      updated[idx] = { ...updated[idx], name: name };
+      return { ...prev, exercises: updated };
     });
+  }
 
-    const c: CompletedWorkout = {
-      id: genId(),
-      mode: activeWorkout.mode, 
-      regimenName: activeWorkout.regimenName,
-      exercises: valid, 
-      startTime: activeWorkout.startTime,
-      endTime: endTime, 
-      durationMs: durMs, 
-      date: fmtDate(activeWorkout.startTime),
-      totalVolume: Math.round(totalVolume),
-      totalSets: totalSets,
-    };
+  function addNewExerciseSlot(currentName?: string) {
+    setActiveWorkout(prev => {
+      if (!prev) return null;
+      const idx = prev.currentExerciseIndex;
+      const updated = [...prev.exercises];
+      if (currentName !== undefined && currentName.trim() !== '') {
+        updated[idx] = { ...updated[idx], name: currentName.trim() };
+      }
+      updated.push({ name: '', sets: [] });
+      return {
+        ...prev,
+        exercises: updated,
+        currentExerciseIndex: updated.length - 1
+      };
+    });
+  }
 
-    setCompletedWorkout(c);
-    setHistory(prev => [c, ...prev]);
-    setActiveWorkout(null); 
-    setScreen('summary');
+  function finishWorkout(finalName?: string) {
+    setActiveWorkout(prev => {
+      if (!prev) return null;
+      const endTime = new Date().toISOString();
+      const durMs = new Date(endTime).getTime() - new Date(prev.startTime).getTime();
+      
+      const exercisesToProcess = [...prev.exercises];
+      if (finalName !== undefined && finalName.trim() !== '') {
+        const idx = prev.currentExerciseIndex;
+        exercisesToProcess[idx] = { ...exercisesToProcess[idx], name: finalName.trim() };
+      }
+
+      const valid = exercisesToProcess.filter(e => e.sets.length > 0 && e.name.trim() !== '');
+
+      if (valid.length === 0) { 
+        setToast('No sets recorded in this workout session'); 
+        setTimeout(() => setToast(''), 2500);
+        return prev; 
+      }
+
+      let totalVolume = 0;
+      let totalSets = 0;
+      valid.forEach(ex => {
+        ex.sets.forEach(st => {
+          totalSets++;
+          const wVal = parseFloat(st.weight) || 0;
+          const rVal = parseFloat(st.reps) || 0;
+          totalVolume += wVal * rVal;
+        });
+      });
+
+      const c: CompletedWorkout = {
+        id: genId(),
+        mode: prev.mode, 
+        regimenName: prev.regimenName,
+        exercises: valid, 
+        startTime: prev.startTime,
+        endTime: endTime, 
+        durationMs: durMs, 
+        date: fmtDate(prev.startTime),
+        totalVolume: Math.round(totalVolume),
+        totalSets: totalSets,
+      };
+
+      setCompletedWorkout(c);
+      setHistory(h => [c, ...h]);
+      setScreen('summary');
+      return null;
+    });
   }
 
   function cancelWorkout() {
