@@ -4,6 +4,7 @@ export const SK = {
   regimens: 'gymlogger_regimens',
   activeWorkout: 'gymlogger_activeworkout',
   url: 'gymlogger_appsscripturl',
+  docUrl: 'gymlogger_googledocurl',
   history: 'gymlogger_history',
   unit: 'gymlogger_unit',
 };

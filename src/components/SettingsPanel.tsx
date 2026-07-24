@@ -3,8 +3,10 @@ import { getAPPS_SCRIPT_TEMPLATE } from '../services/googleSheets';
 
 interface SettingsPanelProps {
   appsScriptUrl: string;
+  docUrl: string;
   unit: string;
   onSaveUrl: (url: string) => void;
+  onSaveDocUrl: (docUrl: string) => void;
   onSaveUnit: (unit: string) => void;
   onResetRegimens: () => void;
   onBack: () => void;
@@ -12,19 +14,23 @@ interface SettingsPanelProps {
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   appsScriptUrl,
+  docUrl,
   unit,
   onSaveUrl,
+  onSaveDocUrl,
   onSaveUnit,
   onResetRegimens,
   onBack
 }) => {
   const [url, setUrl] = useState(appsScriptUrl);
+  const [googleDocUrl, setGoogleDocUrl] = useState(docUrl);
   const [unitState, setUnitState] = useState(unit);
   const [showCode, setShowCode] = useState(false);
   const [toast, setToast] = useState('');
 
   function handleSave() {
     onSaveUrl(url.trim());
+    onSaveDocUrl(googleDocUrl.trim());
     onSaveUnit(unitState);
     setToast('Settings saved!');
     setTimeout(() => setToast(''), 2000);
@@ -60,12 +66,24 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       {/* Google Apps Script URL */}
       <div className="mb-6">
         <label className="text-dimText text-xs font-mono uppercase tracking-wider mb-2 block">
-          Google Apps Script Endpoint Web App URL
+          Google Apps Script Web App URL *
         </label>
         <input value={url} onChange={e => setUrl(e.target.value)}
                placeholder="https://script.google.com/macros/s/.../exec" className="mb-2" />
         <p className="text-xs text-subText font-sans leading-relaxed">
-          Predefined workouts automatically push data rows to your Google Sheet tabs. Custom workouts are excluded.
+          Handles both Google Sheets (predefined workouts) and Google Docs (custom workouts creating a tab per session).
+        </p>
+      </div>
+
+      {/* Optional Google Doc URL */}
+      <div className="mb-6">
+        <label className="text-dimText text-xs font-mono uppercase tracking-wider mb-2 block">
+          Target Google Doc URL / ID (Optional)
+        </label>
+        <input value={googleDocUrl} onChange={e => setGoogleDocUrl(e.target.value)}
+               placeholder="https://docs.google.com/document/d/.../edit" className="mb-2" />
+        <p className="text-xs text-subText font-sans leading-relaxed">
+          Optional. If left blank, the script automatically creates or updates a document named <strong>"Gym Logger - Custom Workouts"</strong> in your Google Drive.
         </p>
       </div>
 
@@ -85,11 +103,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </div>
 
         <div className="p-4 bg-surfaceCard rounded-xl border border-dimBorder text-xs text-subText font-sans leading-relaxed flex flex-col gap-2">
-          <p><strong>Step 1:</strong> Open a new or existing spreadsheet at <a href="https://sheets.new" target="_blank" rel="noreferrer" className="text-white underline font-mono">sheets.new</a>.</p>
+          <p><strong>Step 1:</strong> Open a spreadsheet at <a href="https://sheets.new" target="_blank" rel="noreferrer" className="text-white underline font-mono">sheets.new</a>.</p>
           <p><strong>Step 2:</strong> Go to <strong>Extensions &gt; Apps Script</strong> in the menu.</p>
-          <p><strong>Step 3:</strong> Paste the Apps Script code snippet provided below.</p>
+          <p><strong>Step 3:</strong> Replace everything with the code snippet below.</p>
           <p><strong>Step 4:</strong> Click <strong>Deploy &gt; New deployment</strong>, select <strong>Web app</strong>, set <i>Who has access</i> to <strong>Anyone</strong>.</p>
-          <p><strong>Step 5:</strong> Copy the Web App URL and paste it into the input box above!</p>
+          <p><strong>Step 5:</strong> Copy the Web App URL into the box above!</p>
         </div>
 
         {showCode && (

@@ -18,6 +18,7 @@ export function App() {
   const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(null);
   const [completedWorkout, setCompletedWorkout] = useState<CompletedWorkout | null>(null);
   const [appsScriptUrl, setAppsScriptUrl] = useState('');
+  const [docUrl, setDocUrl] = useState('');
   const [unit, setUnit] = useState('kg');
   const [history, setHistory] = useState<CompletedWorkout[]>([]);
   const [editingRegimenId, setEditingRegimenId] = useState<string | null>(null);
@@ -33,6 +34,9 @@ export function App() {
 
       const su = localStorage.getItem(SK.url);
       if (su) setAppsScriptUrl(su);
+
+      const sdoc = localStorage.getItem(SK.docUrl);
+      if (sdoc) setDocUrl(sdoc);
 
       const sunit = localStorage.getItem(SK.unit);
       if (sunit) setUnit(sunit);
@@ -65,6 +69,10 @@ export function App() {
   useEffect(() => {
     localStorage.setItem(SK.url, appsScriptUrl);
   }, [appsScriptUrl]);
+
+  useEffect(() => {
+    localStorage.setItem(SK.docUrl, docUrl);
+  }, [docUrl]);
 
   useEffect(() => {
     localStorage.setItem(SK.unit, unit);
@@ -359,6 +367,7 @@ export function App() {
         <WorkoutSummary
           workout={completedWorkout}
           appsScriptUrl={appsScriptUrl}
+          docUrl={docUrl}
           unit={unit}
           onBack={() => { setCompletedWorkout(null); setScreen('home'); }}
         />
@@ -367,8 +376,10 @@ export function App() {
       {screen === 'settings' && (
         <SettingsPanel
           appsScriptUrl={appsScriptUrl}
+          docUrl={docUrl}
           unit={unit}
           onSaveUrl={setAppsScriptUrl}
+          onSaveDocUrl={setDocUrl}
           onSaveUnit={setUnit}
           onResetRegimens={() => setRegimens(DEFAULT_REGIMENS)}
           onBack={() => setScreen('home')}
