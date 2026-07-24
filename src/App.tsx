@@ -204,54 +204,53 @@ export function App() {
   }
 
   function finishWorkout(finalName?: string) {
-    setActiveWorkout(prev => {
-      if (!prev) return null;
-      const endTime = new Date().toISOString();
-      const durMs = new Date(endTime).getTime() - new Date(prev.startTime).getTime();
-      
-      const exercisesToProcess = [...prev.exercises];
-      if (finalName !== undefined && finalName.trim() !== '') {
-        const idx = prev.currentExerciseIndex;
-        exercisesToProcess[idx] = { ...exercisesToProcess[idx], name: finalName.trim() };
-      }
+    if (!activeWorkout) return;
 
-      const valid = exercisesToProcess.filter(e => e.sets.length > 0 && e.name.trim() !== '');
+    const endTime = new Date().toISOString();
+    const durMs = new Date(endTime).getTime() - new Date(activeWorkout.startTime).getTime();
+    
+    let exercisesToProcess = [...activeWorkout.exercises];
+    if (finalName !== undefined && finalName.trim() !== '') {
+      const idx = activeWorkout.currentExerciseIndex;
+      exercisesToProcess[idx] = { ...exercisesToProcess[idx], name: finalName.trim() };
+    }
 
-      if (valid.length === 0) { 
-        setToast('No sets recorded in this workout session'); 
-        setTimeout(() => setToast(''), 2500);
-        return prev; 
-      }
+    const valid = exercisesToProcess.filter(e => e.sets.length > 0 && e.name.trim() !== '');
 
-      let totalVolume = 0;
-      let totalSets = 0;
-      valid.forEach(ex => {
-        ex.sets.forEach(st => {
-          totalSets++;
-          const wVal = parseFloat(st.weight) || 0;
-          const rVal = parseFloat(st.reps) || 0;
-          totalVolume += wVal * rVal;
-        });
+    if (valid.length === 0) { 
+      setToast('No sets recorded in this workout session'); 
+      setTimeout(() => setToast(''), 2500);
+      return; 
+    }
+
+    let totalVolume = 0;
+    let totalSets = 0;
+    valid.forEach(ex => {
+      ex.sets.forEach(st => {
+        totalSets++;
+        const wVal = parseFloat(st.weight) || 0;
+        const rVal = parseFloat(st.reps) || 0;
+        totalVolume += wVal * rVal;
       });
-
-      const c: CompletedWorkout = {
-        id: genId(),
-        mode: prev.mode, 
-        regimenName: prev.regimenName,
-        exercises: valid, 
-        startTime: prev.startTime,
-        endTime: endTime, 
-        durationMs: durMs, 
-        date: fmtDate(prev.startTime),
-        totalVolume: Math.round(totalVolume),
-        totalSets: totalSets,
-      };
-
-      setCompletedWorkout(c);
-      setHistory(h => [c, ...h]);
-      setScreen('summary');
-      return null;
     });
+
+    const c: CompletedWorkout = {
+      id: genId(),
+      mode: activeWorkout.mode, 
+      regimenName: activeWorkout.regimenName,
+      exercises: valid, 
+      startTime: activeWorkout.startTime,
+      endTime: endTime, 
+      durationMs: durMs, 
+      date: fmtDate(activeWorkout.startTime),
+      totalVolume: Math.round(totalVolume),
+      totalSets: totalSets,
+    };
+
+    setCompletedWorkout(c);
+    setHistory(h => [c, ...h]);
+    setActiveWorkout(null);
+    setScreen('summary');
   }
 
   function cancelWorkout() {
