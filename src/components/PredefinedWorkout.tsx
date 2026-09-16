@@ -51,11 +51,31 @@ export const PredefinedWorkout: React.FC<PredefinedWorkoutProps> = ({
     setReps('');
   }, [exIdx, currentEx.sets]);
 
+  const completedCount = workout.exercises.filter(e => e.sets.length > 0).length;
+
   function handleSaveSet() {
     if (!reps.trim()) return;
     onAddSet(exIdx, { weight: weight.trim(), reps: reps.trim() });
     setReps('');
   }
+
+  function handleFinish() {
+    if (reps.trim()) {
+      onAddSet(exIdx, { weight: weight.trim(), reps: reps.trim() });
+      setReps('');
+    }
+    onFinish();
+  }
+
+  function handleNextExercise() {
+    if (reps.trim()) {
+      onAddSet(exIdx, { weight: weight.trim(), reps: reps.trim() });
+      setReps('');
+    }
+    onNextExercise();
+  }
+
+  const canFinish = hasAnySets || reps.trim() !== '';
 
   return (
     <div className="screen">
@@ -98,33 +118,38 @@ export const PredefinedWorkout: React.FC<PredefinedWorkoutProps> = ({
                 onSave={handleSaveSet}
                 weightPlaceholder={currentEx.sets.length > 0 ? currentEx.sets[currentEx.sets.length-1].weight : 'Weight'} />
 
+      {/* Recorded in this session pills */}
+      {completedCount > 0 && (
+        <div className="my-2 p-3 bg-surfaceCard rounded-xl border border-dimBorder">
+          <span className="text-[11px] font-mono text-dimText uppercase block mb-1">RECORDED IN THIS SESSION ({completedCount})</span>
+          <div className="flex flex-wrap gap-1.5">
+            {workout.exercises.filter(e => e.sets.length > 0).map((e, idx) => (
+              <span key={idx} className="px-2 py-1 bg-inputbg rounded border border-dimBorder text-xs font-mono text-white">
+                {e.name}: {e.sets.length} sets
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="divider"></div>
 
-      {/* Navigation Buttons */}
+      {/* Action Buttons */}
       <div className="flex flex-col gap-3 mt-auto">
-        {isLast ? (
-          <button className="btn-primary" onClick={onFinish} disabled={!hasAnySets}
-                  style={{ opacity: hasAnySets ? 1 : 0.4 }}>
-            FINISH WORKOUT
-          </button>
-        ) : (
-          <button className="btn-primary" onClick={onNextExercise} disabled={!hasSets}
-                  style={{ opacity: hasSets ? 1 : 0.4 }}>
-            NEXT EXERCISE →
-          </button>
-        )}
         {!isLast && (
           <div className="flex gap-2">
+            <button className="btn-secondary flex-1" onClick={handleNextExercise}>
+              Next Exercise →
+            </button>
             <button className="btn-secondary text-dimText flex-1" onClick={onSkipExercise}>
               Skip Exercise
             </button>
-            {hasAnySets && (
-              <button className="btn-secondary text-emerald-400 flex-1 border-emerald-900/50" onClick={onFinish}>
-                Finish Workout Early
-              </button>
-            )}
           </div>
         )}
+        <button className="btn-primary" onClick={handleFinish} disabled={!canFinish}
+                style={{ opacity: canFinish ? 1 : 0.4 }}>
+          FINISH WORKOUT
+        </button>
       </div>
     </div>
   );
