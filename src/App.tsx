@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Screen, Regimen, ActiveWorkout, CompletedWorkout, WorkoutSet } from './types';
 import { SK, DEFAULT_REGIMENS, DEFAULT_APPS_SCRIPT_URL, DEFAULT_GOOGLE_DOC_URL } from './constants';
 import { fmtDate, genId } from './utils/formatters';
+import { fetchRemoteRegimens, syncRegimensToRemote } from './services/googleSheets';
 import { HomeScreen } from './components/HomeScreen';
 import { RegimenSelect } from './components/RegimenSelect';
 import { RegimenEditor } from './components/RegimenEditor';
@@ -25,6 +26,7 @@ export function App() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [restSeconds, setRestSeconds] = useState(0);
   const [toast, setToast] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   /* Load saved data from localStorage */
   useEffect(() => {
@@ -53,6 +55,53 @@ export function App() {
       console.error('Failed loading stored data', e); 
     }
   }, []);
+
+  /* Auto pull regimens from cloud when URL is ready */
+  useEffect(() => {
+    if (appsScriptUrl) {
+      pullCloudRegimens(false);
+    }
+  }, [appsScriptUrl]);
+
+  function pullCloudRegimens(showNotice = true) {
+    if (!appsScriptUrl) {
+      if (showNotice) showToastMsg('No Apps Script URL set in Settings');
+      return;
+    }
+    setIsSyncing(true);
+    fetchRemoteRegimens(appsScriptUrl).then(res => {
+      setIsSyncing(false);
+      if (res.ok && res.regimens && res.regimens.length > 0) {
+        setRegimens(res.regimens);
+        if (showNotice) showToastMsg('Regimens updated from cloud!');
+      } else if (showNotice) {
+        showToastMsg(res.msg || 'No cloud regimens found or sync failed');
+      }
+    }).catch(() => {
+      setIsSyncing(false);
+      if (showNotice) showToastMsg('Cloud sync failed');
+    });
+  }
+
+  function pushCloudRegimens(updatedRegimens: Regimen[], showNotice = false) {
+    if (!appsScriptUrl) return;
+    setIsSyncing(true);
+    syncRegimensToRemote(appsScriptUrl, updatedRegimens).then(res => {
+      setIsSyncing(false);
+      if (showNotice) {
+        showToastMsg(res.ok ? 'Regimens saved to cloud!' : 'Cloud sync failed');
+      }
+    }).catch(() => {
+      setIsSyncing(false);
+      if (showNotice) showToastMsg('Cloud sync error');
+    });
+  }
+
+  function showToastMsg(msg: string, dur = 2500) {
+    setToast(msg);
+    setTimeout(() => setToast(''), dur);
+  }
+
 
   /* Save regimens */
   useEffect(() => {
@@ -284,14 +333,19 @@ export function App() {
   function saveRegimen(r: Regimen) {
     setRegimens(prev => {
       const exists = prev.find(p => p.id === r.id);
-      if (exists) return prev.map(p => p.id === r.id ? r : p);
-      return [...prev, r];
+      const updated = exists ? prev.map(p => p.id === r.id ? r : p) : [...prev, r];
+      pushCloudRegimens(updated, true);
+      return updated;
     });
     setScreen('regimen-select');
   }
 
   function deleteRegimen(id: string) {
-    setRegimens(prev => prev.filter(r => r.id !== id));
+    setRegimens(prev => {
+      const updated = prev.filter(r => r.id !== id);
+      pushCloudRegimens(updated, true);
+      return updated;
+    });
     setScreen('regimen-select');
   }
 
@@ -318,6 +372,8 @@ export function App() {
           onSelect={startPredefined}
           onEdit={(r) => { setEditingRegimenId(r.id); setScreen('regimen-edit'); }}
           onCreateNew={() => { setEditingRegimenId(null); setScreen('regimen-edit'); }}
+          onSyncCloud={() => pullCloudRegimens(true)}
+          isSyncing={isSyncing}
           onBack={() => setScreen('home')}
         />
       )}
@@ -381,7 +437,13 @@ export function App() {
           onSaveUrl={setAppsScriptUrl}
           onSaveDocUrl={setDocUrl}
           onSaveUnit={setUnit}
-          onResetRegimens={() => setRegimens(DEFAULT_REGIMENS)}
+          onResetRegimens={() => {
+            setRegimens(DEFAULT_REGIMENS);
+            pushCloudRegimens(DEFAULT_REGIMENS, true);
+          }}
+          onPullCloud={() => pullCloudRegimens(true)}
+          onPushCloud={() => pushCloudRegimens(regimens, true)}
+          isSyncing={isSyncing}
           onBack={() => setScreen('home')}
         />
       )}

@@ -6,6 +6,8 @@ interface RegimenSelectProps {
   onSelect: (r: Regimen) => void;
   onEdit: (r: Regimen) => void;
   onCreateNew: () => void;
+  onSyncCloud?: () => void;
+  isSyncing?: boolean;
   onBack: () => void;
 }
 
@@ -14,17 +16,30 @@ export const RegimenSelect: React.FC<RegimenSelectProps> = ({
   onSelect,
   onEdit,
   onCreateNew,
+  onSyncCloud,
+  isSyncing,
   onBack
 }) => {
   return (
     <div className="screen">
-      <div className="flex items-center gap-3 mb-6">
-        <button className="w-10 h-10 rounded-lg bg-surfaceCard border border-dimBorder flex items-center justify-center text-white text-lg"
-                onClick={onBack} aria-label="Back">←</button>
-        <div>
-          <h2 className="text-lg font-bold tracking-wider uppercase font-mono">Predefined Workout</h2>
-          <p className="text-xs text-dimText font-mono">Choose a regimen to start</p>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <button className="w-10 h-10 rounded-lg bg-surfaceCard border border-dimBorder flex items-center justify-center text-white text-lg"
+                  onClick={onBack} aria-label="Back">←</button>
+          <div>
+            <h2 className="text-lg font-bold tracking-wider uppercase font-mono">Predefined Workout</h2>
+            <p className="text-xs text-dimText font-mono">Choose a regimen to start</p>
+          </div>
         </div>
+        {onSyncCloud && (
+          <button className="px-3 py-2 bg-surfaceCard border border-dimBorder rounded-lg text-xs font-mono text-dimText hover:text-white flex items-center gap-1.5 transition-colors"
+                  onClick={onSyncCloud} title="Sync Regimens from Cloud">
+            <svg className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>{isSyncing ? 'Syncing...' : 'Sync'}</span>
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 flex-1 overflow-y-auto mb-6">

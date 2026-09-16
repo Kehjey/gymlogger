@@ -9,6 +9,9 @@ interface SettingsPanelProps {
   onSaveDocUrl: (docUrl: string) => void;
   onSaveUnit: (unit: string) => void;
   onResetRegimens: () => void;
+  onPullCloud?: () => void;
+  onPushCloud?: () => void;
+  isSyncing?: boolean;
   onBack: () => void;
 }
 
@@ -20,6 +23,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onSaveDocUrl,
   onSaveUnit,
   onResetRegimens,
+  onPullCloud,
+  onPushCloud,
+  isSyncing,
   onBack
 }) => {
   const [url, setUrl] = useState(appsScriptUrl);
@@ -71,7 +77,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         <input value={url} onChange={e => setUrl(e.target.value)}
                placeholder="https://script.google.com/macros/s/.../exec" className="mb-2" />
         <p className="text-xs text-subText font-sans leading-relaxed">
-          Handles both Google Sheets (predefined workouts) and Google Docs (custom workouts creating a tab per session).
+          Syncs regimens across all devices automatically, and logs workout data to Google Sheets & Docs.
         </p>
       </div>
 
@@ -93,6 +99,24 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       <div className="divider"></div>
 
+      {/* Cross-Device Cloud Sync */}
+      <div className="mb-6">
+        <label className="text-dimText text-xs font-mono uppercase tracking-wider mb-2 block">Cross-Device Regimens Sync</label>
+        <div className="flex gap-2">
+          <button className="btn-secondary text-sm py-2 flex-1" onClick={onPullCloud} disabled={isSyncing}>
+            {isSyncing ? 'Syncing...' : '↓ Pull Cloud Regimens'}
+          </button>
+          <button className="btn-secondary text-sm py-2 flex-1" onClick={onPushCloud} disabled={isSyncing}>
+            {isSyncing ? 'Syncing...' : '↑ Push Laptop Regimens'}
+          </button>
+        </div>
+        <p className="text-xs text-subText font-sans leading-relaxed mt-2">
+          Regimens automatically sync with your Google Sheet whenever you save or open the app.
+        </p>
+      </div>
+
+      <div className="divider"></div>
+
       {/* Setup Guide */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
@@ -106,7 +130,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           <p><strong>Step 1:</strong> Open a spreadsheet at <a href="https://sheets.new" target="_blank" rel="noreferrer" className="text-white underline font-mono">sheets.new</a>.</p>
           <p><strong>Step 2:</strong> Go to <strong>Extensions &gt; Apps Script</strong> in the menu.</p>
           <p><strong>Step 3:</strong> Replace everything with the code snippet below.</p>
-          <p><strong>Step 4:</strong> Click <strong>Deploy &gt; New deployment</strong>, select <strong>Web app</strong>, set <i>Who has access</i> to <strong>Anyone</strong>.</p>
+          <p><strong>Step 4:</strong> Click <strong>Deploy &gt; New deployment</strong> (or <i>Manage deployments &gt; Edit &gt; New version</i>), select <strong>Web app</strong>, set <i>Who has access</i> to <strong>Anyone</strong>.</p>
           <p><strong>Step 5:</strong> Copy the Web App URL into the box above!</p>
         </div>
 
