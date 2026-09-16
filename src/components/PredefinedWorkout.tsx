@@ -36,6 +36,8 @@ export const PredefinedWorkout: React.FC<PredefinedWorkoutProps> = ({
   const currentEx = workout.exercises[exIdx];
   const isLast = exIdx >= workout.exercises.length - 1;
   const hasSets = currentEx.sets.length > 0;
+  const totalRecordedSets = workout.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
+  const hasAnySets = totalRecordedSets > 0;
 
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
@@ -101,8 +103,8 @@ export const PredefinedWorkout: React.FC<PredefinedWorkoutProps> = ({
       {/* Navigation Buttons */}
       <div className="flex flex-col gap-3 mt-auto">
         {isLast ? (
-          <button className="btn-primary" onClick={onFinish} disabled={!hasSets}
-                  style={{ opacity: hasSets ? 1 : 0.4 }}>
+          <button className="btn-primary" onClick={onFinish} disabled={!hasAnySets}
+                  style={{ opacity: hasAnySets ? 1 : 0.4 }}>
             FINISH WORKOUT
           </button>
         ) : (
@@ -112,9 +114,16 @@ export const PredefinedWorkout: React.FC<PredefinedWorkoutProps> = ({
           </button>
         )}
         {!isLast && (
-          <button className="btn-secondary text-dimText" onClick={onSkipExercise}>
-            Skip Exercise
-          </button>
+          <div className="flex gap-2">
+            <button className="btn-secondary text-dimText flex-1" onClick={onSkipExercise}>
+              Skip Exercise
+            </button>
+            {hasAnySets && (
+              <button className="btn-secondary text-emerald-400 flex-1 border-emerald-900/50" onClick={onFinish}>
+                Finish Workout Early
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

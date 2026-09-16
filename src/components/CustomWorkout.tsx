@@ -80,6 +80,8 @@ export const CustomWorkout: React.FC<CustomWorkoutProps> = ({
 
   const canAddNext = (exerciseName.trim() !== '' || currentEx.name !== '') && currentEx.sets.length > 0;
   const completedCount = workout.exercises.filter(e => e.sets.length > 0).length;
+  const totalRecordedSets = workout.exercises.reduce((acc, e) => acc + e.sets.length, 0);
+  const hasAnySets = totalRecordedSets > 0 || currentEx.sets.length > 0;
 
   return (
     <div className="screen">
@@ -149,7 +151,7 @@ export const CustomWorkout: React.FC<CustomWorkoutProps> = ({
           + Add Another Exercise
         </button>
         <button className="btn-primary" onClick={handleFinish}
-                disabled={!canAddNext} style={{ opacity: canAddNext ? 1 : 0.4 }}>
+                disabled={!hasAnySets} style={{ opacity: hasAnySets ? 1 : 0.4 }}>
           FINISH & SAVE SUMMARY
         </button>
       </div>
