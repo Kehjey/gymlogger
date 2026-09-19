@@ -89,7 +89,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         <input value={googleDocUrl} onChange={e => setGoogleDocUrl(e.target.value)}
                placeholder="https://docs.google.com/document/d/.../edit" className="mb-2" />
         <p className="text-xs text-subText font-sans leading-relaxed">
-          Optional. If left blank, the script automatically creates or updates a document named <strong>"Gym Logger - Custom Workouts"</strong> in your Google Drive.
+          Optional. If left blank, the script automatically creates or updates a document named <strong>"Gym Logger Workouts"</strong> in your Google Drive.
         </p>
       </div>
 

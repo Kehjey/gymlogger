@@ -21,7 +21,8 @@ export function sendToSheets(url: string, w: CompletedWorkout, unit: string): Pr
       });
     }
   }
-  const payload = { action: 'logWorkout', regimen: w.regimenName || 'Custom', data: rows };
+  const regimenName = (w.regimenName && w.regimenName.trim()) ? w.regimenName.trim() : (w.mode === 'predefined' ? 'Predefined' : 'Custom');
+  const payload = { action: 'logWorkout', regimen: regimenName, data: rows };
   
   return fetch(url, {
     method: 'POST',
@@ -43,7 +44,7 @@ export function sendToSheets(url: string, w: CompletedWorkout, unit: string): Pr
   });
 }
 
-export function sendCustomToDoc(
+export function sendToDoc(
   url: string, 
   docUrl: string, 
   w: CompletedWorkout, 
@@ -52,7 +53,10 @@ export function sendCustomToDoc(
   if (!url) return Promise.resolve({ok: false, msg: 'No Apps Script URL configured in Settings'});
 
   const textContent = genTxt(w, unit);
-  const title = `Custom Workout - ${w.date}`;
+  const title = w.mode === 'predefined'
+    ? `${w.regimenName || 'Predefined'} Workout - ${w.date}`
+    : `Custom Workout - ${w.date}`;
+
   const payload = {
     action: 'logCustomDoc',
     docUrl: docUrl || '',
@@ -84,6 +88,8 @@ export function sendCustomToDoc(
       .catch((e2) => { return {ok: false, msg: 'Network error or invalid URL'}; });
   });
 }
+
+export const sendCustomToDoc = sendToDoc;
 
 export function fetchRemoteRegimens(url: string): Promise<{ok: boolean; regimens?: any[]; msg?: string}> {
   if (!url) return Promise.resolve({ ok: false, msg: 'No Apps Script URL configured' });
@@ -160,10 +166,10 @@ function doPost(e) {
   try {
     var contents = JSON.parse(e.postData.contents);
     
-    // 1. LOG PREDEFINED WORKOUT TO GOOGLE SHEETS
+    // 1. LOG WORKOUT TO GOOGLE SHEETS
     if (contents.action === 'logWorkout') {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
-      var sheetName = contents.regimen || 'Predefined';
+      var sheetName = contents.regimen || 'Custom';
       var sheet = ss.getSheetByName(sheetName);
       if (!sheet) {
         sheet = ss.insertSheet(sheetName);
@@ -175,12 +181,12 @@ function doPost(e) {
         var r = rows[i];
         sheet.appendRow([r.date, r.exercise, r.setNumber, r.weight, r.reps, r.startTime, r.endTime, r.duration]);
       }
-      return ContentService.createTextOutput(JSON.stringify({status: 'success', message: 'Logged ' + rows.length + ' sets to Sheet'}))
+      return ContentService.createTextOutput(JSON.stringify({status: 'success', message: 'Logged ' + rows.length + ' sets to Sheet (' + sheetName + ')'}))
         .setMimeType(ContentService.MimeType.JSON);
     }
     
-    // 2. LOG CUSTOM WORKOUT TO GOOGLE DOC (CREATES A NEW TAB PER WORKOUT)
-    if (contents.action === 'logCustomDoc') {
+    // 2. LOG WORKOUT TO GOOGLE DOC (CREATES A NEW TAB PER WORKOUT)
+    if (contents.action === 'logCustomDoc' || contents.action === 'logDoc') {
       var docUrl = contents.docUrl;
       var doc;
       if (docUrl && docUrl.trim() !== '') {
@@ -189,15 +195,18 @@ function doPost(e) {
         }
       }
       if (!doc) {
-        var files = DriveApp.getFilesByName("Gym Logger - Custom Workouts");
+        var files = DriveApp.getFilesByName("Gym Logger Workouts");
+        if (!files.hasNext()) {
+          files = DriveApp.getFilesByName("Gym Logger - Custom Workouts");
+        }
         if (files.hasNext()) {
           doc = DocumentApp.openById(files.next().getId());
         } else {
-          doc = DocumentApp.create("Gym Logger - Custom Workouts");
+          doc = DocumentApp.create("Gym Logger Workouts");
         }
       }
 
-      var tabTitle = contents.title || ("Custom Workout " + contents.date);
+      var tabTitle = contents.title || ("Workout " + contents.date);
       var textContent = contents.text;
 
       var tabCreated = false;

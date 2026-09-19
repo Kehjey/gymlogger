@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CompletedWorkout } from '../types';
 import { fmtDur, genFilename } from '../utils/formatters';
 import { genTxt, dlTxt } from '../utils/exporter';
-import { sendToSheets, sendCustomToDoc } from '../services/googleSheets';
+import { sendToSheets, sendToDoc } from '../services/googleSheets';
 
 interface WorkoutSummaryProps {
   workout: CompletedWorkout;
@@ -20,17 +20,16 @@ export const WorkoutSummary: React.FC<WorkoutSummaryProps> = ({
   onBack
 }) => {
   const isPredefined = workout.mode === 'predefined';
-  const isCustom = workout.mode === 'custom';
   
-  // Sheet Status for Predefined
-  const shouldSaveToSheets = isPredefined && !!appsScriptUrl;
+  // Sheet Status for ALL workouts
+  const shouldSaveToSheets = !!appsScriptUrl;
   const [sheetsStatus, setSheetsStatus] = useState<'pending' | 'sending' | 'success' | 'failed' | 'skipped'>(
     shouldSaveToSheets ? 'pending' : 'skipped'
   );
   const [sheetsMsg, setSheetsMsg] = useState('');
 
-  // Doc Status for Custom
-  const shouldSaveToDoc = isCustom && !!appsScriptUrl;
+  // Doc Status for ALL workouts
+  const shouldSaveToDoc = !!appsScriptUrl;
   const [docStatus, setDocStatus] = useState<'pending' | 'sending' | 'success' | 'failed' | 'skipped'>(
     shouldSaveToDoc ? 'pending' : 'skipped'
   );
@@ -38,28 +37,36 @@ export const WorkoutSummary: React.FC<WorkoutSummaryProps> = ({
   const [createdDocUrl, setCreatedDocUrl] = useState<string | undefined>(undefined);
   const [toast, setToast] = useState('');
 
-  // Auto-sync predefined to sheets
+  // Auto-sync all workouts to Google Sheets
   useEffect(() => {
-    if (sheetsStatus === 'pending' && isPredefined) {
-      setSheetsStatus('sending');
-      sendToSheets(appsScriptUrl, workout, unit).then((result) => {
-        if (result.ok) { 
-          setSheetsStatus('success'); 
-          setSheetsMsg(result.msg); 
-        } else { 
-          setSheetsStatus('failed'); 
-          setSheetsMsg(result.msg); 
-        }
-      });
+    if (sheetsStatus === 'pending') {
+      triggerSheetsSync();
     }
-  }, [sheetsStatus, isPredefined, appsScriptUrl, workout, unit]);
+  }, [sheetsStatus]);
 
-  // Auto-sync custom to doc
+  // Auto-sync all workouts to Google Doc
   useEffect(() => {
-    if (docStatus === 'pending' && isCustom) {
+    if (docStatus === 'pending') {
       triggerDocSync();
     }
-  }, [docStatus, isCustom]);
+  }, [docStatus]);
+
+  function triggerSheetsSync() {
+    if (!appsScriptUrl) {
+      setSheetsStatus('skipped');
+      return;
+    }
+    setSheetsStatus('sending');
+    sendToSheets(appsScriptUrl, workout, unit).then((result) => {
+      if (result.ok) { 
+        setSheetsStatus('success'); 
+        setSheetsMsg(result.msg); 
+      } else { 
+        setSheetsStatus('failed'); 
+        setSheetsMsg(result.msg); 
+      }
+    });
+  }
 
   function triggerDocSync() {
     if (!appsScriptUrl) {
@@ -69,7 +76,7 @@ export const WorkoutSummary: React.FC<WorkoutSummaryProps> = ({
       return;
     }
     setDocStatus('sending');
-    sendCustomToDoc(appsScriptUrl, docUrl, workout, unit).then((result) => {
+    sendToDoc(appsScriptUrl, docUrl, workout, unit).then((result) => {
       if (result.ok) {
         setDocStatus('success');
         setDocMsg(result.msg);
@@ -92,6 +99,7 @@ export const WorkoutSummary: React.FC<WorkoutSummaryProps> = ({
   }
 
   const nonEmpty = workout.exercises.filter(e => e.sets.length > 0);
+  const targetSheetTab = workout.regimenName || (isPredefined ? 'Predefined' : 'Custom');
 
   return (
     <div className="screen overflow-y-auto">
@@ -125,49 +133,45 @@ export const WorkoutSummary: React.FC<WorkoutSummaryProps> = ({
         </div>
       </div>
 
-      {/* Google Sheets Banner (Predefined Mode) */}
-      {isPredefined && (
-        <div className="mb-6 p-4 rounded-xl bg-surfaceCard border border-dimBorder">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-mono font-bold uppercase text-white">GOOGLE SHEETS BACKEND</span>
-            {sheetsStatus === 'sending' && <span className="text-xs font-mono text-amber-400">Syncing...</span>}
-            {sheetsStatus === 'success' && <span className="text-xs font-mono text-emerald-400">✓ Saved</span>}
-            {sheetsStatus === 'failed' && <span className="text-xs font-mono text-red-400">× Error</span>}
-            {sheetsStatus === 'skipped' && <span className="text-xs font-mono text-dimText">Not Configured</span>}
-          </div>
-          <p className="text-xs text-subText font-sans">
-            {sheetsStatus === 'sending' && 'Sending workout sets to your Google Sheet tabs...'}
-            {sheetsStatus === 'success' && `Successfully appended sets to '${workout.regimenName}' tab.`}
-            {sheetsStatus === 'failed' && (sheetsMsg || 'Failed to connect to Google Apps Script.')}
-            {sheetsStatus === 'skipped' && 'Configure Google Apps Script URL in Settings to auto-sync predefined workouts.'}
-          </p>
+      {/* Google Sheets Banner */}
+      <div className="mb-4 p-4 rounded-xl bg-surfaceCard border border-dimBorder">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-mono font-bold uppercase text-white">GOOGLE SHEETS BACKEND</span>
+          {sheetsStatus === 'sending' && <span className="text-xs font-mono text-amber-400">Syncing...</span>}
+          {sheetsStatus === 'success' && <span className="text-xs font-mono text-emerald-400">✓ Saved</span>}
+          {sheetsStatus === 'failed' && <span className="text-xs font-mono text-red-400">× Error</span>}
+          {sheetsStatus === 'skipped' && <span className="text-xs font-mono text-dimText">Not Configured</span>}
         </div>
-      )}
+        <p className="text-xs text-subText font-sans">
+          {sheetsStatus === 'sending' && 'Sending workout sets to your Google Sheet...'}
+          {sheetsStatus === 'success' && `Successfully appended sets to '${targetSheetTab}' tab.`}
+          {sheetsStatus === 'failed' && (sheetsMsg || 'Failed to connect to Google Apps Script.')}
+          {sheetsStatus === 'skipped' && 'Configure Google Apps Script URL in Settings to auto-sync workouts.'}
+        </p>
+      </div>
 
-      {/* Google Doc Banner (Custom Mode) */}
-      {isCustom && (
-        <div className="mb-6 p-4 rounded-xl bg-surfaceCard border border-dimBorder">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-mono font-bold uppercase text-white">GOOGLE DOC BACKEND</span>
-            {docStatus === 'sending' && <span className="text-xs font-mono text-amber-400">Adding Tab...</span>}
-            {docStatus === 'success' && <span className="text-xs font-mono text-emerald-400">✓ Saved to Doc</span>}
-            {docStatus === 'failed' && <span className="text-xs font-mono text-red-400">× Error</span>}
-            {docStatus === 'skipped' && <span className="text-xs font-mono text-dimText">Not Configured</span>}
-          </div>
-          <p className="text-xs text-subText font-sans mb-2">
-            {docStatus === 'sending' && 'Creating a new tab in your Google Doc for this workout...'}
-            {docStatus === 'success' && (docMsg || 'Workout summary added as a new tab in Google Doc.')}
-            {docStatus === 'failed' && (docMsg || 'Failed to sync to Google Doc. Make sure Apps Script code is updated.')}
-            {docStatus === 'skipped' && 'Configure Google Apps Script URL in Settings to automatically sync custom workouts to Google Docs.'}
-          </p>
-          {createdDocUrl && (
-            <a href={createdDocUrl} target="_blank" rel="noreferrer"
-               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-white text-black font-mono font-bold text-xs">
-              Open Google Doc ↗
-            </a>
-          )}
+      {/* Google Doc Banner */}
+      <div className="mb-6 p-4 rounded-xl bg-surfaceCard border border-dimBorder">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-mono font-bold uppercase text-white">GOOGLE DOC BACKEND</span>
+          {docStatus === 'sending' && <span className="text-xs font-mono text-amber-400">Adding Tab...</span>}
+          {docStatus === 'success' && <span className="text-xs font-mono text-emerald-400">✓ Saved to Doc</span>}
+          {docStatus === 'failed' && <span className="text-xs font-mono text-red-400">× Error</span>}
+          {docStatus === 'skipped' && <span className="text-xs font-mono text-dimText">Not Configured</span>}
         </div>
-      )}
+        <p className="text-xs text-subText font-sans mb-2">
+          {docStatus === 'sending' && 'Creating a new tab in your Google Doc for this workout...'}
+          {docStatus === 'success' && (docMsg || 'Workout summary added as a new tab in Google Doc.')}
+          {docStatus === 'failed' && (docMsg || 'Failed to sync to Google Doc. Make sure Apps Script code is updated.')}
+          {docStatus === 'skipped' && 'Configure Google Apps Script URL in Settings to automatically sync workouts to Google Docs.'}
+        </p>
+        {createdDocUrl && (
+          <a href={createdDocUrl} target="_blank" rel="noreferrer"
+             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-white text-black font-mono font-bold text-xs">
+            Open Google Doc ↗
+          </a>
+        )}
+      </div>
 
       {/* Exercise Breakdown */}
       <div className="flex-1 overflow-y-auto mb-6">
@@ -193,18 +197,23 @@ export const WorkoutSummary: React.FC<WorkoutSummaryProps> = ({
 
       {/* Action Buttons */}
       <div className="flex flex-col gap-3 pb-4">
-        {isCustom && (
-          <button className="btn-primary flex items-center justify-center gap-2" onClick={triggerDocSync}>
-            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"></path>
-              <path d="M14 2v6h6"></path>
-              <path d="M16 13H8"></path>
-              <path d="M16 17H8"></path>
-              <path d="M10 9H8"></path>
-            </svg>
-            {docStatus === 'success' ? 'RE-SYNC TO GOOGLE DOC' : 'SAVE TO GOOGLE DOC'}
-          </button>
-        )}
+        <button className="btn-primary flex items-center justify-center gap-2" onClick={triggerDocSync}>
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"></path>
+            <path d="M14 2v6h6"></path>
+            <path d="M16 13H8"></path>
+            <path d="M16 17H8"></path>
+            <path d="M10 9H8"></path>
+          </svg>
+          {docStatus === 'success' ? 'RE-SYNC TO GOOGLE DOC' : 'SAVE TO GOOGLE DOC'}
+        </button>
+
+        <button className="btn-secondary flex items-center justify-center gap-2 text-subText" onClick={triggerSheetsSync}>
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          {sheetsStatus === 'success' ? 'Re-sync to Google Sheets' : 'Save to Google Sheets'}
+        </button>
 
         <button className="btn-secondary flex items-center justify-center gap-2 text-subText" onClick={handleDownload}>
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
